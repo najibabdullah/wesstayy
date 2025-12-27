@@ -1,177 +1,106 @@
 // lib/services/propertyService.ts
 
-const API_URL = "https://property-api-blush.vercel.app/api"
+import { Property } from "@/lib/types/property";
 
-export interface Property {
-  id?: string
-  nama: string
-  lokasi: string
-  harga_per_bulan: number
-  jumlah_kamar?: number
-  jumlah_kamar_mandi?: number
-  fasilitas?: string[]
-  deskripsi?: string
-  status?: string
-}
+// Mock data dummy
+let mockProperties: Property[] = [
+  {
+    id: "1",
+    nama: "Kos Mawar Indah",
+    lokasi: "Jakarta Selatan",
+    harga_per_bulan: 1500000,
+    jumlah_kamar: 15,
+    jumlah_kamar_mandi: 3,
+    fasilitas: ["WiFi", "AC", "Kamar Mandi Dalam", "Parkir"],
+    deskripsi: "Kos nyaman dekat kampus dan pusat perbelanjaan",
+    status: "Aktif",
+  },
+  {
+    id: "2",
+    nama: "Kos Melati Residence",
+    lokasi: "Bandung",
+    harga_per_bulan: 1200000,
+    jumlah_kamar: 20,
+    jumlah_kamar_mandi: 5,
+    fasilitas: ["WiFi", "Dapur Bersama", "Laundry"],
+    deskripsi: "Lokasi strategis dekat stasiun",
+    status: "Aktif",
+  },
+  {
+    id: "3",
+    nama: "Kos Anggrek Premium",
+    lokasi: "Yogyakarta",
+    harga_per_bulan: 1800000,
+    jumlah_kamar: 10,
+    jumlah_kamar_mandi: 10,
+    fasilitas: ["WiFi", "AC", "Kamar Mandi Dalam", "TV Kabel", "Kasur Spring Bed"],
+    deskripsi: "Kos eksklusif dengan fasilitas lengkap",
+    status: "Aktif",
+  },
+];
+
+let nextId = 4;
 
 export const propertyService = {
-  /**
-   * Get all properties
-   */
   getAllProperties: async (): Promise<Property[]> => {
-    try {
-      const response = await fetch(`${API_URL}/properti`, {
-        cache: 'no-store' // Next.js specific - force fresh data
-      })
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`)
-      }
-      return await response.json()
-    } catch (error: any) {
-      console.error("❌ Error getting properties:", error)
-      throw new Error(`Gagal mengambil data properti: ${error.message}`)
-    }
+    // Simulasi delay API
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.log("✅ Properties loaded:", mockProperties);
+    return [...mockProperties];
   },
 
-  /**
-   * Get single property by ID
-   */
-  getPropertyById: async (id: string): Promise<Property> => {
-    try {
-      const response = await fetch(`${API_URL}/properti/${id}`, {
-        cache: 'no-store'
-      })
-      if (!response.ok) {
-        throw new Error("Properti tidak ditemukan")
-      }
-      return await response.json()
-    } catch (error) {
-      console.error("❌ Error getting property:", error)
-      throw error
+  createProperty: async (propertyData: Omit<Property, "id">): Promise<Property> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    if (!propertyData.nama || !propertyData.lokasi || !propertyData.harga_per_bulan) {
+      throw new Error("Nama, lokasi, dan harga wajib diisi");
     }
+
+    const newProperty: Property = {
+      ...propertyData,
+      id: String(nextId++),
+      status: propertyData.status || "Aktif",
+    };
+
+    mockProperties.push(newProperty);
+    console.log("✅ Property created:", newProperty);
+    return newProperty;
   },
 
-  /**
-   * Create new property
-   */
-  createProperty: async (propertyData: Property): Promise<any> => {
-    try {
-      if (!propertyData.nama || !propertyData.lokasi || !propertyData.harga_per_bulan) {
-        throw new Error("Nama, lokasi, dan harga wajib diisi")
-      }
-
-      const response = await fetch(`${API_URL}/properti`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(propertyData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Gagal membuat properti")
-      }
-
-      const result = await response.json()
-      console.log("✅ Property created:", result)
-      return result
-    } catch (error) {
-      console.error("❌ Error creating property:", error)
-      throw error
+  updateProperty: async (id: string, propertyData: Partial<Property>): Promise<Property> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    const index = mockProperties.findIndex((p) => p.id === id);
+    if (index === -1) {
+      throw new Error("Properti tidak ditemukan");
     }
+
+    mockProperties[index] = {
+      ...mockProperties[index],
+      ...propertyData,
+    };
+
+    console.log("✅ Property updated:", mockProperties[index]);
+    return mockProperties[index];
   },
 
-  /**
-   * Update existing property
-   */
-  updateProperty: async (id: string, propertyData: Partial<Property>): Promise<any> => {
-    try {
-      const response = await fetch(`${API_URL}/properti/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(propertyData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Gagal mengupdate properti")
-      }
-
-      const result = await response.json()
-      console.log("✅ Property updated:", result)
-      return result
-    } catch (error) {
-      console.error("❌ Error updating property:", error)
-      throw error
+  deleteProperty: async (id: string): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    const index = mockProperties.findIndex((p) => p.id === id);
+    if (index === -1) {
+      throw new Error("Properti tidak ditemukan");
     }
+
+    mockProperties.splice(index, 1);
+    console.log("✅ Property deleted, ID:", id);
   },
+};
 
-  /**
-   * Delete property
-   */
-  deleteProperty: async (id: string): Promise<any> => {
-    try {
-      const response = await fetch(`${API_URL}/properti/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Gagal menghapus properti")
-      }
-
-      const result = await response.json()
-      console.log("✅ Property deleted:", result)
-      return result
-    } catch (error) {
-      console.error("❌ Error deleting property:", error)
-      throw error
-    }
-  },
-
-  /**
-   * Search properties by name or location
-   */
-  searchProperties: async (query: string): Promise<Property[]> => {
-    try {
-      const allProperties = await propertyService.getAllProperties()
-      return allProperties.filter(
-        (p) =>
-          p.nama?.toLowerCase().includes(query.toLowerCase()) ||
-          p.lokasi?.toLowerCase().includes(query.toLowerCase())
-      )
-    } catch (error) {
-      console.error("❌ Error searching properties:", error)
-      throw error
-    }
-  },
-}
-
-/**
- * Format number to Rupiah currency
- */
 export const formatRupiah = (number: number): string => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-  }).format(number)
-}
-
-/**
- * Format date to Indonesian format
- */
-export const formatDate = (date: Date | string): string => {
-  return new Date(date).toLocaleDateString("id-ID", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
+  }).format(number);
+};
