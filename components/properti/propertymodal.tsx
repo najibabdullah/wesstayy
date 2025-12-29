@@ -22,6 +22,7 @@ export default function PropertyModal({
   const [formData, setFormData] = useState({
     nama: "",
     lokasi: "",
+    tipe: "Guest House",
     harga_per_bulan: "",
     jumlah_kamar: "",
     jumlah_kamar_mandi: "",
@@ -34,6 +35,7 @@ export default function PropertyModal({
       setFormData({
         nama: property.nama || "",
         lokasi: property.lokasi || "",
+        tipe: property.tipe || "Guest House",
         harga_per_bulan: property.harga_per_bulan?.toString() || "",
         jumlah_kamar: property.jumlah_kamar?.toString() || "",
         jumlah_kamar_mandi: property.jumlah_kamar_mandi?.toString() || "",
@@ -44,6 +46,7 @@ export default function PropertyModal({
       setFormData({
         nama: "",
         lokasi: "",
+        tipe: "Guest House",
         harga_per_bulan: "",
         jumlah_kamar: "",
         jumlah_kamar_mandi: "",
@@ -54,7 +57,7 @@ export default function PropertyModal({
   }, [property, isOpen]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -79,6 +82,7 @@ export default function PropertyModal({
     onSave({
       nama: formData.nama,
       lokasi: formData.lokasi,
+      tipe: formData.tipe,
       harga_per_bulan: Number(formData.harga_per_bulan),
       jumlah_kamar: formData.jumlah_kamar ? Number(formData.jumlah_kamar) : undefined,
       jumlah_kamar_mandi: formData.jumlah_kamar_mandi
@@ -120,6 +124,23 @@ export default function PropertyModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipe Properti
+            </label>
+            <select
+              name="tipe"
+              value={formData.tipe}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="Guest House">Guest House</option>
+              <option value="Villa">Villa</option>
+              <option value="Hotel">Hotel</option>
+            </select>
           </div>
 
           <div>
