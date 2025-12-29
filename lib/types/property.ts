@@ -4,6 +4,7 @@ export interface Property {
   id?: string;
   nama: string;
   lokasi: string;
+  tipe?: string; // Guest House, Villa, Hotel
   harga_per_bulan: number;
   jumlah_kamar?: number;
   jumlah_kamar_mandi?: number;

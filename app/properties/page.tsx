@@ -7,12 +7,16 @@ import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import PropertyCard from "@/components/properti/propertycard";
 import SearchFilter from "@/components/properti/searchfilter";
+import PropertyModal from "@/components/properti/propertymodal";
 import { Property } from "@/lib/types/property";
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Mock data - Ganti dengan API call jika sudah ada backend
   const mockProperties: Property[] = [
@@ -96,8 +100,38 @@ export default function PropertiesPage() {
   };
 
   const handleEdit = (property: Property) => {
-    alert(`Edit properti: ${property.nama}`);
-    // Implementasi edit nanti
+    setSelectedProperty(property);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setSelectedProperty(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProperty(null);
+  };
+
+  const handleSaveProperty = async (propertyData: Omit<Property, "id">) => {
+    setIsSaving(true);
+    try {
+      if (selectedProperty?.id) {
+        // Update existing
+        const updatedProperty = { ...propertyData, id: selectedProperty.id };
+        setProperties(properties.map(p => p.id === selectedProperty.id ? updatedProperty : p));
+        setFilteredProperties(filteredProperties.map(p => p.id === selectedProperty.id ? updatedProperty : p));
+      } else {
+        // Add new
+        const newProperty = { ...propertyData, id: Date.now().toString() };
+        setProperties([...properties, newProperty]);
+        setFilteredProperties([...filteredProperties, newProperty]);
+      }
+      handleCloseModal();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -127,7 +161,9 @@ export default function PropertiesPage() {
                 </p>
               </div>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+            <button 
+              onClick={handleAddNew}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
               <Plus className="w-5 h-5" />
               Tambah Properti
             </button>
@@ -180,6 +216,15 @@ export default function PropertiesPage() {
           </div>
         )}
       </div>
+
+      {/* Property Modal */}
+      <PropertyModal 
+        isOpen={isModalOpen}
+        property={selectedProperty}
+        onClose={handleCloseModal}
+        onSave={handleSaveProperty}
+        isLoading={isSaving}
+      />
     </div>
   );
 }

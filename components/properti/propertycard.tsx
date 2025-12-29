@@ -11,6 +11,19 @@ interface PropertyCardProps {
   isDeleting?: boolean;
 }
 
+const getTipeBadgeColor = (tipe?: string) => {
+  switch (tipe) {
+    case "Guest House":
+      return "bg-green-500 text-white";
+    case "Villa":
+      return "bg-purple-500 text-white";
+    case "Hotel":
+      return "bg-orange-500 text-white";
+    default:
+      return "bg-blue-500 text-white";
+  }
+};
+
 export default function PropertyCard({
   property,
   onEdit,
@@ -23,7 +36,10 @@ export default function PropertyCard({
         <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
           <Home className="w-16 h-16 text-white opacity-50" />
         </div>
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex gap-2">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getTipeBadgeColor(property.tipe)}`}>
+            {property.tipe || "Guest House"}
+          </span>
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">
             {property.status || "Aktif"}
           </span>

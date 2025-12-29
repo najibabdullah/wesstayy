@@ -20,6 +20,7 @@ export default function SearchFilter({
     minPrice: "",
     maxPrice: "",
     minRooms: "",
+    tipe: "Semua",
     status: "Semua"
   });
 
@@ -40,6 +41,7 @@ export default function SearchFilter({
       minPrice: "",
       maxPrice: "",
       minRooms: "",
+      tipe: "Semua",
       status: "Semua"
     };
     setFilters(defaultFilters);
@@ -72,7 +74,22 @@ export default function SearchFilter({
 
         {/* Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4 border-t border-gray-200">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipe Properti
+              </label>
+              <select
+                value={filters.tipe}
+                onChange={(e) => handleFilterChange("tipe", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                <option>Semua</option>
+                <option>Guest House</option>
+                <option>Villa</option>
+                <option>Hotel</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Harga Minimum
@@ -125,7 +142,7 @@ export default function SearchFilter({
             </div>
             <button
               onClick={resetFilters}
-              className="sm:col-span-2 lg:col-span-4 mt-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm"
+              className="sm:col-span-2 lg:col-span-5 mt-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm"
             >
               Reset Filter
             </button>

@@ -11,6 +11,19 @@ interface PropertyTableProps {
   isDeleting?: boolean;
 }
 
+const getTipeBadgeColor = (tipe?: string) => {
+  switch (tipe) {
+    case "Guest House":
+      return "bg-green-100 text-green-700";
+    case "Villa":
+      return "bg-purple-100 text-purple-700";
+    case "Hotel":
+      return "bg-orange-100 text-orange-700";
+    default:
+      return "bg-blue-100 text-blue-700";
+  }
+};
+
 export default function PropertyTable({
   properties,
   onEdit,
@@ -25,6 +38,9 @@ export default function PropertyTable({
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Properti
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipe
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Lokasi
@@ -47,6 +63,11 @@ export default function PropertyTable({
                   <p className="text-sm font-medium text-gray-900">
                     {property.nama}
                   </p>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTipeBadgeColor(property.tipe)}`}>
+                    {property.tipe || "Guest House"}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <p className="text-sm text-gray-900">{property.lokasi}</p>
