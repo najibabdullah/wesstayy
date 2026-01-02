@@ -60,7 +60,7 @@ export default function PropertyTable({
             {properties.map((property) => (
               <tr key={property.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-black-900">
                     {property.nama}
                   </p>
                 </td>
