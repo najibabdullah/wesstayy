@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   Search,
   Filter,
@@ -17,160 +17,212 @@ import {
   MoreVertical,
   Eye,
   Check,
-  X
+  X,
+  Plus
 } from "lucide-react";
 
+// ✅ INTERFACE SESUAI LARAVEL API
+interface Pembayaran {
+  id: number;
+  properti_id: number;
+  penyewa_id: number | null;
+  jumlah: number;
+  tanggal_jatuh_tempo: string;
+  metode_pembayaran: string;
+  status: "pending" | "completed" | "failed";
+  nomor_referensi: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function PaymentsPage() {
+  const [pembayarans, setPembayarans] = useState<Pembayaran[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    properti_id: "",
+    penyewa_id: "",
+    jumlah: "",
+    tanggal_jatuh_tempo: "",
+    metode_pembayaran: "transfer",
+  });
 
-  // Summary stats
+  const API = "http://localhost:8000/api";
+
+  // ✅ FETCH DATA DARI LARAVEL
+  const fetchPembayaran = async () => {
+    try {
+      setLoading(true);
+      
+      let url = `${API}/pembayaran`;
+      if (selectedTab !== "all") {
+        url += `?status=${selectedTab}`;
+      }
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil data");
+      
+      const data = await res.json();
+      setPembayarans(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error:", err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPembayaran();
+  }, [selectedTab]);
+
+  // ✅ HITUNG STATISTIK DARI DATA REAL
   const stats = [
     {
       title: "Total Pembayaran Bulan Ini",
-      value: "Rp 72,5 Jt",
+      value: formatCurrency(pembayarans.reduce((sum, p) => sum + Number(p.jumlah), 0)),
       icon: DollarSign,
       color: "bg-blue-500",
-      textColor: "text-blue-600",
-      bgColor: "bg-blue-50"
     },
     {
       title: "Pembayaran Selesai",
-      value: "45",
+      value: pembayarans.filter(p => p.status === "completed").length,
       icon: CheckCircle,
       color: "bg-green-500",
-      textColor: "text-green-600",
-      bgColor: "bg-green-50"
     },
     {
       title: "Menunggu Pembayaran",
-      value: "8",
+      value: pembayarans.filter(p => p.status === "pending").length,
       icon: Clock,
       color: "bg-orange-500",
-      textColor: "text-orange-600",
-      bgColor: "bg-orange-50"
     },
     {
-      title: "Terlambat",
-      value: "3",
+      title: "Gagal",
+      value: pembayarans.filter(p => p.status === "failed").length,
       icon: AlertCircle,
       color: "bg-red-500",
-      textColor: "text-red-600",
-      bgColor: "bg-red-50"
-    }
-  ];
-
-  // Payment data
-  const payments = [
-    {
-      id: "PAY001",
-      tenant: "Budi Santoso",
-      property: "Kos Mawar Indah",
-      room: "Kamar 101",
-      amount: 1500000,
-      dueDate: "28 Des 2024",
-      paidDate: "27 Des 2024",
-      status: "paid",
-      method: "Transfer Bank",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY002",
-      tenant: "Siti Nurhaliza",
-      property: "Kos Mawar Indah",
-      room: "Kamar 205",
-      amount: 1500000,
-      dueDate: "28 Des 2024",
-      paidDate: null,
-      status: "pending",
-      method: "-",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY003",
-      tenant: "Ahmad Dahlan",
-      property: "Kos Melati",
-      room: "Kamar 102",
-      amount: 1200000,
-      dueDate: "30 Des 2024",
-      paidDate: null,
-      status: "pending",
-      method: "-",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY004",
-      tenant: "Rina Wati",
-      property: "Kos Anggrek Premium",
-      room: "Kamar 301",
-      amount: 1800000,
-      dueDate: "25 Des 2024",
-      paidDate: "25 Des 2024",
-      status: "paid",
-      method: "Transfer Bank",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY005",
-      tenant: "Andi Wijaya",
-      property: "Kos Melati",
-      room: "Kamar 103",
-      amount: 1200000,
-      dueDate: "20 Des 2024",
-      paidDate: null,
-      status: "overdue",
-      method: "-",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY006",
-      tenant: "Dewi Lestari",
-      property: "Kos Mawar Indah",
-      room: "Kamar 104",
-      amount: 1500000,
-      dueDate: "15 Des 2024",
-      paidDate: "14 Des 2024",
-      status: "paid",
-      method: "E-Wallet",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY007",
-      tenant: "Rudi Hartono",
-      property: "Kos Anggrek Premium",
-      room: "Kamar 202",
-      amount: 1800000,
-      dueDate: "22 Des 2024",
-      paidDate: null,
-      status: "overdue",
-      method: "-",
-      period: "Desember 2024"
-    },
-    {
-      id: "PAY008",
-      tenant: "Linda Kusuma",
-      property: "Kos Melati",
-      room: "Kamar 201",
-      amount: 1200000,
-      dueDate: "10 Des 2024",
-      paidDate: "09 Des 2024",
-      status: "paid",
-      method: "Transfer Bank",
-      period: "Desember 2024"
     }
   ];
 
   const tabs = [
-    { id: "all", label: "Semua", count: payments.length },
-    { id: "paid", label: "Lunas", count: payments.filter(p => p.status === "paid").length },
-    { id: "pending", label: "Pending", count: payments.filter(p => p.status === "pending").length },
-    { id: "overdue", label: "Terlambat", count: payments.filter(p => p.status === "overdue").length }
+    { id: "all", label: "Semua", count: pembayarans.length },
+    { id: "completed", label: "Lunas", count: pembayarans.filter(p => p.status === "completed").length },
+    { id: "pending", label: "Pending", count: pembayarans.filter(p => p.status === "pending").length },
+    { id: "failed", label: "Gagal", count: pembayarans.filter(p => p.status === "failed").length }
   ];
 
-  const getStatusBadge = (status: "paid" | "pending" | "overdue") => {
+  // ✅ SUBMIT FORM TAMBAH PEMBAYARAN
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const res = await fetch(`${API}/pembayaran`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseFloat(formData.jumlah),
+          properti_id: parseInt(formData.properti_id),
+          penyewa_id: formData.penyewa_id ? parseInt(formData.penyewa_id) : null,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Gagal menambah pembayaran");
+
+      setFormData({
+        properti_id: "",
+        penyewa_id: "",
+        jumlah: "",
+        tanggal_jatuh_tempo: "",
+        metode_pembayaran: "transfer",
+      });
+      setShowModal(false);
+      fetchPembayaran();
+      
+      alert("✅ Pembayaran berhasil ditambahkan!");
+    } catch (err) {
+      alert("❌ " + (err instanceof Error ? err.message : "Gagal menambah pembayaran"));
+    }
+  };
+
+  // ✅ KONFIRMASI PEMBAYARAN (pending → completed)
+  const handleConfirmPayment = async (id: number) => {
+    const nomorRef = prompt("Masukkan nomor referensi pembayaran:") || `REF${Date.now()}`;
+    
+    try {
+      const res = await fetch(`${API}/pembayaran/${id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          status: "completed",
+          nomor_referensi: nomorRef,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Gagal konfirmasi pembayaran");
+
+      fetchPembayaran();
+      alert(`✅ Pembayaran #${id} berhasil dikonfirmasi!`);
+    } catch (err) {
+      alert("❌ " + (err instanceof Error ? err.message : "Gagal konfirmasi"));
+    }
+  };
+
+  // ✅ BATALKAN PEMBAYARAN (pending → failed)
+  const handleCancelPayment = async (id: number) => {
+    if (!confirm(`Yakin ingin membatalkan pembayaran #${id}?`)) return;
+    
+    try {
+      const res = await fetch(`${API}/pembayaran/${id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          status: "failed",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Gagal batalkan pembayaran");
+
+      fetchPembayaran();
+      alert(`✅ Pembayaran #${id} dibatalkan!`);
+    } catch (err) {
+      alert("❌ " + (err instanceof Error ? err.message : "Gagal batalkan"));
+    }
+  };
+
+  // ✅ HAPUS PEMBAYARAN
+  const handleDelete = async (id: number) => {
+    if (!confirm(`Yakin ingin menghapus pembayaran #${id}?`)) return;
+
+    try {
+      const res = await fetch(`${API}/pembayaran/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Gagal menghapus");
+
+      fetchPembayaran();
+      alert("✅ Pembayaran berhasil dihapus!");
+    } catch (err) {
+      alert("❌ " + (err instanceof Error ? err.message : "Gagal menghapus"));
+    }
+  };
+
+  const getStatusBadge = (status: "completed" | "pending" | "failed") => {
     const statusConfig = {
-      paid: {
+      completed: {
         label: "Lunas",
         className: "bg-green-100 text-green-700",
         icon: CheckCircle
@@ -180,8 +232,8 @@ export default function PaymentsPage() {
         className: "bg-orange-100 text-orange-700",
         icon: Clock
       },
-      overdue: {
-        label: "Terlambat",
+      failed: {
+        label: "Gagal",
         className: "bg-red-100 text-red-700",
         icon: XCircle
       }
@@ -198,23 +250,33 @@ export default function PaymentsPage() {
     );
   };
 
-  const formatCurrency = (amount: string | number | bigint) => {
+  function formatCurrency(amount: string | number | bigint) {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(Number(amount));
-  };
+  }
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesTab = selectedTab === "all" || payment.status === selectedTab;
+  const filteredPayments = pembayarans.filter(payment => {
     const matchesSearch = 
-      payment.tenant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.id.toLowerCase().includes(searchQuery.toLowerCase());
+      payment.id.toString().includes(searchQuery) ||
+      payment.properti_id.toString().includes(searchQuery) ||
+      (payment.nomor_referensi && payment.nomor_referensi.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    return matchesTab && matchesSearch;
+    return matchesSearch;
   });
+
+  if (loading && pembayarans.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -232,13 +294,12 @@ export default function PaymentsPage() {
             </div>
             
             <div className="flex items-center gap-3">
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Filter</span>
-              </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">Export</span>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Tambah Pembayaran</span>
               </button>
             </div>
           </div>
@@ -273,7 +334,7 @@ export default function PaymentsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cari penyewa, properti, atau ID pembayaran..."
+                placeholder="Cari ID pembayaran, properti, atau nomor referensi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -312,19 +373,19 @@ export default function PaymentsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    ID / Penyewa
+                    ID Pembayaran
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Properti & Kamar
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Periode
+                    Properti
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Jatuh Tempo
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Jumlah
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Metode
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
@@ -343,15 +404,17 @@ export default function PaymentsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="bg-blue-100 p-2 rounded-lg">
-                          <User className="w-5 h-5 text-blue-600" />
+                          <CreditCard className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-gray-900">
-                            {payment.tenant}
+                            #{payment.id}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {payment.id}
-                          </div>
+                          {payment.nomor_referensi && (
+                            <div className="text-xs text-gray-500">
+                              {payment.nomor_referensi}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -360,11 +423,13 @@ export default function PaymentsPage() {
                         <Building2 className="w-4 h-4 text-gray-400" />
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {payment.property}
+                            Properti #{payment.properti_id}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {payment.room}
-                          </div>
+                          {payment.penyewa_id && (
+                            <div className="text-xs text-gray-500">
+                              Penyewa #{payment.penyewa_id}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -372,61 +437,51 @@ export default function PaymentsPage() {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-900">
-                          {payment.period}
+                          {new Date(payment.tanggal_jatuh_tempo).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric"
+                          })}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {payment.dueDate}
-                      </div>
-                      {payment.paidDate && (
-                        <div className="text-xs text-green-600">
-                          Dibayar: {payment.paidDate}
-                        </div>
-                      )}
-                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="text-sm font-bold text-gray-900">
-                        {formatCurrency(payment.amount)}
+                        {formatCurrency(payment.jumlah)}
                       </div>
-                      {payment.method !== "-" && (
-                        <div className="text-xs text-gray-500">
-                          {payment.method}
-                        </div>
-                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+                        {payment.metode_pembayaran}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {getStatusBadge(payment.status as "paid" | "pending" | "overdue")}
+                      {getStatusBadge(payment.status)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        {payment.status === "pending" || payment.status === "overdue" ? (
+                        {payment.status === "pending" && (
                           <>
                             <button 
+                              onClick={() => handleConfirmPayment(payment.id)}
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                               title="Konfirmasi Pembayaran"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                             <button 
+                              onClick={() => handleCancelPayment(payment.id)}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Batalkan"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </>
-                        ) : (
-                          <button 
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Lihat Detail"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
                         )}
                         <button 
+                          onClick={() => handleDelete(payment.id)}
                           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Opsi Lainnya"
+                          title="Hapus"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
@@ -453,9 +508,8 @@ export default function PaymentsPage() {
           )}
         </div>
 
-        {/* Info Cards */}
+        {/* Alert Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          {/* Pending Payments Alert */}
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
             <div className="flex items-start gap-4">
               <div className="bg-orange-500 p-3 rounded-lg">
@@ -466,16 +520,12 @@ export default function PaymentsPage() {
                   Pembayaran Menunggu Konfirmasi
                 </h3>
                 <p className="text-sm text-orange-700 mb-4">
-                  Ada 8 pembayaran yang menunggu untuk dikonfirmasi. Segera periksa dan konfirmasi pembayaran yang masuk.
+                  Ada {stats[2].value} pembayaran yang menunggu untuk dikonfirmasi.
                 </p>
-                <button className="text-sm font-semibold text-orange-600 hover:text-orange-700">
-                  Lihat Detail →
-                </button>
               </div>
             </div>
           </div>
 
-          {/* Overdue Alert */}
           <div className="bg-red-50 border border-red-200 rounded-xl p-6">
             <div className="flex items-start gap-4">
               <div className="bg-red-500 p-3 rounded-lg">
@@ -483,19 +533,120 @@ export default function PaymentsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-red-900 mb-2">
-                  Pembayaran Terlambat
+                  Pembayaran Gagal
                 </h3>
                 <p className="text-sm text-red-700 mb-4">
-                  3 pembayaran sudah melewati tanggal jatuh tempo. Hubungi penyewa untuk mengingatkan pembayaran.
+                  {stats[3].value} pembayaran gagal diproses.
                 </p>
-                <button className="text-sm font-semibold text-red-600 hover:text-red-700">
-                  Kirim Pengingat →
-                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* MODAL TAMBAH PEMBAYARAN */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Tambah Pembayaran</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ID Properti
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={formData.properti_id}
+                  onChange={(e) => setFormData({ ...formData, properti_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  placeholder="Contoh: 1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ID Penyewa (opsional)
+                </label>
+                <input
+                  type="number"
+                  value={formData.penyewa_id}
+                  onChange={(e) => setFormData({ ...formData, penyewa_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  placeholder="Contoh: 1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jumlah (Rp)
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={formData.jumlah}
+                  onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  placeholder="Contoh: 2500000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tanggal Jatuh Tempo
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.tanggal_jatuh_tempo}
+                  onChange={(e) => setFormData({ ...formData, tanggal_jatuh_tempo: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Metode Pembayaran
+                </label>
+                <select
+                  value={formData.metode_pembayaran}
+                  onChange={(e) => setFormData({ ...formData, metode_pembayaran: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                >
+                  <option value="transfer">Transfer Bank</option>
+                  <option value="e_wallet">E-Wallet</option>
+                  <option value="tunai">Tunai</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
