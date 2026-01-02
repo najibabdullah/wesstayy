@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader } from "lucide-react";
 import { Property } from "@/lib/types/property";
+import MapSelector from "./mapselector";
 
 interface PropertyModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function PropertyModal({
   const [formData, setFormData] = useState({
     nama: "",
     lokasi: "",
+    coordinates: null as { lat: number; lng: number } | null,
     tipe: "Guest House",
     harga_per_bulan: "",
     jumlah_kamar: "",
@@ -35,6 +37,7 @@ export default function PropertyModal({
       setFormData({
         nama: property.nama || "",
         lokasi: property.lokasi || "",
+          coordinates: (property as any).coordinates || null,
         tipe: property.tipe || "Guest House",
         harga_per_bulan: property.harga_per_bulan?.toString() || "",
         jumlah_kamar: property.jumlah_kamar?.toString() || "",
@@ -46,6 +49,7 @@ export default function PropertyModal({
       setFormData({
         nama: "",
         lokasi: "",
+          coordinates: null,
         tipe: "Guest House",
         harga_per_bulan: "",
         jumlah_kamar: "",
@@ -79,7 +83,7 @@ export default function PropertyModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+    const payload: any = {
       nama: formData.nama,
       lokasi: formData.lokasi,
       tipe: formData.tipe,
@@ -90,14 +94,17 @@ export default function PropertyModal({
         : undefined,
       fasilitas: formData.fasilitas,
       deskripsi: formData.deskripsi,
-    });
+    };
+    if (formData.coordinates) payload.coordinates = formData.coordinates;
+    onSave(payload as any);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-lg border border-gray-200 pointer-events-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900">
             {property ? "Edit Properti" : "Tambah Properti"}
@@ -121,7 +128,7 @@ export default function PropertyModal({
               value={formData.nama}
               onChange={handleChange}
               placeholder="Contoh: Kos Mawar"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -134,7 +141,7 @@ export default function PropertyModal({
               name="tipe"
               value={formData.tipe}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="Guest House">Guest House</option>
@@ -153,9 +160,33 @@ export default function PropertyModal({
               value={formData.lokasi}
               onChange={handleChange}
               placeholder="Contoh: Jakarta Selatan"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100 cursor-not-allowed"
               required
             />
+
+            <div className="pt-2">
+              <MapSelector
+                value={formData.coordinates || null}
+                onChange={(c, address) => {
+                  setFormData((p) => ({ 
+                    ...p, 
+                    coordinates: c,
+                    lokasi: address || p.lokasi
+                  }));
+                }}
+                height="240px"
+              />
+              <div className="mt-2 text-sm text-gray-600">
+                {formData.coordinates ? (
+                  <div>
+                    Koordinat: {formData.coordinates.lat.toFixed(6)}, {formData.coordinates.lng.toFixed(6)}
+                  </div>
+                ) : (
+                  <div>Double-click peta untuk memilih lokasi (mengambil koordinat)</div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -168,7 +199,7 @@ export default function PropertyModal({
               value={formData.harga_per_bulan}
               onChange={handleChange}
               placeholder="Contoh: 1200000"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -184,7 +215,7 @@ export default function PropertyModal({
                 value={formData.jumlah_kamar}
                 onChange={handleChange}
                 placeholder="15"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
@@ -197,7 +228,7 @@ export default function PropertyModal({
                 value={formData.jumlah_kamar_mandi}
                 onChange={handleChange}
                 placeholder="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -211,7 +242,7 @@ export default function PropertyModal({
               value={formData.fasilitas?.join(", ") || ""}
               onChange={handleFacilitiesChange}
               placeholder="WiFi, AC, Kamar Mandi Dalam"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -224,7 +255,7 @@ export default function PropertyModal({
               value={formData.deskripsi}
               onChange={handleChange}
               placeholder="Deskripsi properti..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
           </div>
