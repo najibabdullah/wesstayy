@@ -75,7 +75,7 @@ export default function ReportsPage() {
       });
   }, []);
 
-  const rupiah = (n) =>
+  const rupiah = (n: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
@@ -194,7 +194,7 @@ export default function ReportsPage() {
                   tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
                 />
                 <Tooltip
-                  formatter={(v) => rupiah(v)}
+                  formatter={(v) => (typeof v === "number" ? rupiah(v) : "")}
                   contentStyle={{
                     backgroundColor: "white",
                     border: "1px solid #e2e8f0",
@@ -299,7 +299,7 @@ export default function ReportsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="4"
+                      colSpan={4}
                       className="px-8 py-12 text-center text-slate-500"
                     >
                       <div className="flex flex-col items-center gap-3">
@@ -322,7 +322,7 @@ export default function ReportsPage() {
 
 /* ================= COMPONENT ================= */
 
-function SummaryCard({ title, value, color, icon, trend }) {
+function SummaryCard({ title, value, color, icon, trend }: { title: string; value: number; color: 'green' | 'red' | 'blue'; icon: string; trend: string }) {
   const colorMap = {
     green: {
       bg: "from-green-50 to-emerald-50",
