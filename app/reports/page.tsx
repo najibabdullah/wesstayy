@@ -12,13 +12,16 @@ import {
   Legend,
 } from "recharts";
 
+// ✅ INTERFACE DISESUAIKAN DENGAN RESPONSE LARAVEL
 interface Transaction {
   id: number;
-  tanggal: string;
-  kategori: string;
-  deskripsi: string;
+  tipe: string; // "pendapatan" atau "pengeluaran"
   jumlah: number;
-  tipe: string;
+  tanggal: string; // Format: "YYYY-MM-DD"
+  keterangan: string; // Di Laravel kamu pakai 'keterangan' bukan 'deskripsi'
+  pembayaran_id?: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ChartDataPoint {
@@ -31,6 +34,7 @@ interface Summary {
   total_pendapatan: number;
   total_pengeluaran: number;
   profit: number;
+  margin: number; // Tambahan dari API kamu
 }
 
 export default function ReportsPage() {
@@ -38,43 +42,79 @@ export default function ReportsPage() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // ✅ GANTI DENGAN URL BACKEND LARAVEL KAMU
   const API = "http://localhost:8000/api";
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API}/laporan/summary`).then((res) => res.json()),
-      fetch(`${API}/laporan/chart`).then((res) => res.json()),
-      fetch(`${API}/laporan/transaksi`).then((res) => res.json()),
-    ])
-      .then(([summaryData, chartData, transactionData]) => {
-        setSummary(summaryData);
-        setChartData(chartData);
-        setTransactions(transactionData.data || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        // Fallback data untuk demo
-        setSummary({
-          total_pendapatan: 1500000,
-          total_pengeluaran: 0,
-          profit: 1500000,
-        });
-        setChartData([{ bulan: 1, pendapatan: 1500000, pengeluaran: 0 }]);
-        setTransactions([
-          {
-            id: 1,
-            tanggal: "2025-01-15",
-            kategori: "Penjualan",
-            deskripsi: "Penjualan produk bulan ini",
-            jumlah: 1500000,
-            tipe: "pendapatan",
-          },
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // ✅ FETCH 3 ENDPOINT SEKALIGUS
+        const [summaryRes, chartRes, transactionRes] = await Promise.all([
+          fetch(`${API}/laporan/summary`),
+          fetch(`${API}/laporan/chart`),
+          fetch(`${API}/laporan/transaksi`),
         ]);
+
+        // ✅ CEK APAKAH RESPONSE OK
+        if (!summaryRes.ok || !chartRes.ok || !transactionRes.ok) {
+          throw new Error("Gagal mengambil data dari server");
+        }
+
+        const summaryData = await summaryRes.json();
+        const rawChartData = await chartRes.json();
+        const transactionData = await transactionRes.json();
+
+        // ✅ GENERATE DATA UNTUK SEMUA BULAN (1-12)
+        const completeChartData = generateCompleteMonthData(rawChartData);
+
+        // ✅ SET DATA KE STATE
+        setSummary(summaryData);
+        setChartData(completeChartData);
+        
+        // Laravel paginate response ada di property 'data'
+        setTransactions(transactionData.data || transactionData);
+
         setLoading(false);
-      });
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
+  // ✅ FUNCTION BUAT GENERATE DATA SEMUA BULAN
+  const generateCompleteMonthData = (apiData: ChartDataPoint[]) => {
+    // Bikin array 12 bulan dengan nilai 0
+    const allMonths: ChartDataPoint[] = Array.from({ length: 12 }, (_, i) => ({
+      bulan: i + 1,
+      pendapatan: 0,
+      pengeluaran: 0,
+    }));
+
+    // Merge dengan data dari API
+    apiData.forEach((data) => {
+      const monthIndex = data.bulan - 1;
+      if (monthIndex >= 0 && monthIndex < 12) {
+        allMonths[monthIndex] = {
+          bulan: data.bulan,
+          pendapatan: data.pendapatan,
+          pengeluaran: data.pengeluaran,
+        };
+      }
+    });
+
+    return allMonths;
+  };
+
+  // ✅ HELPER FUNCTION FORMAT RUPIAH
   const rupiah = (n: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -82,6 +122,7 @@ export default function ReportsPage() {
       minimumFractionDigits: 0,
     }).format(n);
 
+  // ✅ NAMA BULAN INDONESIA
   const bulan = [
     "Jan",
     "Feb",
@@ -97,12 +138,34 @@ export default function ReportsPage() {
     "Des",
   ];
 
+  // ✅ LOADING STATE
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600 font-medium">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ ERROR STATE
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center max-w-md bg-white p-8 rounded-2xl shadow-lg border border-red-200">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            Gagal Memuat Data
+          </h2>
+          <p className="text-slate-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Coba Lagi
+          </button>
         </div>
       </div>
     );
@@ -133,27 +196,31 @@ export default function ReportsPage() {
 
         {/* SUMMARY CARDS */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <SummaryCard
               title="Total Pendapatan"
               value={summary.total_pendapatan}
               color="green"
               icon="💰"
-              trend="+12%"
             />
             <SummaryCard
               title="Total Pengeluaran"
               value={summary.total_pengeluaran}
               color="red"
               icon="💸"
-              trend="-5%"
             />
             <SummaryCard
               title="Profit Bersih"
               value={summary.profit}
               color="blue"
               icon="📈"
-              trend="+18%"
+            />
+            <SummaryCard
+              title="Margin"
+              value={summary.margin}
+              color="purple"
+              icon="📊"
+              isPercentage
             />
           </div>
         )}
@@ -168,67 +235,66 @@ export default function ReportsPage() {
               Perbandingan pendapatan dan pengeluaran per bulan
             </p>
           </div>
-          <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-slate-100">
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorPendapatan" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorPengeluaran" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis
-                  dataKey="bulan"
-                  tickFormatter={(v) => bulan[v - 1]}
-                  stroke="#64748b"
-                  style={{ fontSize: "14px", fontWeight: "500" }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  style={{ fontSize: "14px", fontWeight: "500" }}
-                  tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
-                />
-                <Tooltip
-                  formatter={(v) => (typeof v === "number" ? rupiah(v) : "")}
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                  }}
-                  labelStyle={{ fontWeight: "600", color: "#1e293b" }}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: "20px" }}
-                  iconType="circle"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pendapatan"
-                  stroke="#22c55e"
-                  strokeWidth={3}
-                  dot={{ fill: "#22c55e", r: 6 }}
-                  activeDot={{ r: 8 }}
-                  name="Pendapatan"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pengeluaran"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ fill: "#ef4444", r: 6 }}
-                  activeDot={{ r: 8 }}
-                  name="Pengeluaran"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+
+          {chartData.length > 0 ? (
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-slate-100">
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="bulan"
+                    tickFormatter={(v) => bulan[v - 1] || `Bulan ${v}`}
+                    stroke="#64748b"
+                    style={{ fontSize: "14px", fontWeight: "500" }}
+                  />
+                  <YAxis
+                    stroke="#64748b"
+                    style={{ fontSize: "14px", fontWeight: "500" }}
+                    tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
+                  />
+                  <Tooltip
+                    formatter={(v) => rupiah(typeof v === "number" ? v : 0)}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "12px",
+                      padding: "12px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                    labelFormatter={(v) => bulan[v - 1] || `Bulan ${v}`}
+                    labelStyle={{ fontWeight: "600", color: "#1e293b" }}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: "20px" }}
+                    iconType="circle"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="pendapatan"
+                    stroke="#22c55e"
+                    strokeWidth={3}
+                    dot={{ fill: "#22c55e", r: 6 }}
+                    activeDot={{ r: 8 }}
+                    name="Pendapatan"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="pengeluaran"
+                    stroke="#ef4444"
+                    strokeWidth={3}
+                    dot={{ fill: "#ef4444", r: 6 }}
+                    activeDot={{ r: 8 }}
+                    name="Pengeluaran"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-500">
+              <div className="text-6xl mb-4">📈</div>
+              <p className="text-lg font-medium">Belum ada data grafik</p>
+            </div>
+          )}
         </div>
 
         {/* TABLE */}
@@ -250,10 +316,10 @@ export default function ReportsPage() {
                     Tanggal
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wide">
-                    Kategori
+                    Tipe
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wide">
-                    Deskripsi
+                    Keterangan
                   </th>
                   <th className="px-8 py-4 text-right text-sm font-bold text-slate-700 uppercase tracking-wide">
                     Jumlah
@@ -262,7 +328,7 @@ export default function ReportsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {transactions.length > 0 ? (
-                  transactions.map((t, idx) => (
+                  transactions.map((t) => (
                     <tr
                       key={t.id}
                       className="hover:bg-slate-50 transition-colors duration-150"
@@ -275,12 +341,18 @@ export default function ReportsPage() {
                         })}
                       </td>
                       <td className="px-6 py-5">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
-                          {t.kategori}
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            t.tipe === "pendapatan"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {t.tipe === "pendapatan" ? "💰 Pendapatan" : "💸 Pengeluaran"}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-slate-600">
-                        {t.deskripsi}
+                        {t.keterangan || "-"}
                       </td>
                       <td className="px-8 py-5 text-right">
                         <span
@@ -322,7 +394,19 @@ export default function ReportsPage() {
 
 /* ================= COMPONENT ================= */
 
-function SummaryCard({ title, value, color, icon, trend }: { title: string; value: number; color: 'green' | 'red' | 'blue'; icon: string; trend: string }) {
+function SummaryCard({
+  title,
+  value,
+  color,
+  icon,
+  isPercentage = false,
+}: {
+  title: string;
+  value: number;
+  color: "green" | "red" | "blue" | "purple";
+  icon: string;
+  isPercentage?: boolean;
+}) {
   const colorMap = {
     green: {
       bg: "from-green-50 to-emerald-50",
@@ -342,6 +426,12 @@ function SummaryCard({ title, value, color, icon, trend }: { title: string; valu
       text: "text-blue-600",
       iconBg: "bg-blue-100",
     },
+    purple: {
+      bg: "from-purple-50 to-violet-50",
+      border: "border-purple-200",
+      text: "text-purple-600",
+      iconBg: "bg-purple-100",
+    },
   };
 
   const config = colorMap[color];
@@ -354,19 +444,16 @@ function SummaryCard({ title, value, color, icon, trend }: { title: string; valu
         <div className={`${config.iconBg} rounded-xl p-3 text-2xl`}>
           {icon}
         </div>
-        <span
-          className={`text-xs font-semibold px-2 py-1 rounded-full ${config.iconBg} ${config.text}`}
-        >
-          {trend}
-        </span>
       </div>
       <p className="text-sm font-medium text-slate-600 mb-1">{title}</p>
       <p className={`text-3xl font-bold ${config.text}`}>
-        {new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-          minimumFractionDigits: 0,
-        }).format(value)}
+        {isPercentage
+          ? `${value.toFixed(2)}%`
+          : new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+              minimumFractionDigits: 0,
+            }).format(value)}
       </p>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { Edit, Trash2 } from "lucide-react";
 import { Property } from "@/lib/types/property";
-import { formatRupiah } from "@/lib/services/propertyService";
+import { formatRupiah } from "@/lib/utils/formatters";
 
 interface PropertyTableProps {
   properties: Property[];
@@ -65,7 +65,11 @@ export default function PropertyTable({
                   </p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTipeBadgeColor(property.tipe)}`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded-full ${getTipeBadgeColor(
+                      property.tipe
+                    )}`}
+                  >
                     {property.tipe || "Guest House"}
                   </span>
                 </td>
@@ -91,7 +95,7 @@ export default function PropertyTable({
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDelete(property.id!)}
+                      onClick={() => onDelete(String(property.id!))}
                       disabled={isDeleting}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                     >
