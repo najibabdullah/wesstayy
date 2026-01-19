@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { propertyService, formatRupiah } from "@/lib/services/propertyService";
+import { Property } from "@/lib/types/property";
 
 interface Stats {
   title: string;
@@ -29,81 +30,102 @@ interface Stats {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const properties = await propertyService.getAllProperties();
-        
-        // Calculate total properties
-        const totalProperties = properties.length;
-        
-        // Calculate total tenants (mock: assume each room in active properties has a tenant)
-        const totalTenants = properties.reduce((sum, prop) => {
-          if (prop.status === "Aktif") {
-            return sum + Math.floor((prop.jumlah_kamar ?? 0) * 0.85); // Assume 85% occupancy
-          }
-          return sum;
-        }, 0);
-        
-        // Calculate total rooms and available rooms
-        const totalRooms = properties.reduce((sum, prop) => sum + (prop.jumlah_kamar ?? 0), 0);
-        const occupiedRooms = totalTenants;
-        const availableRooms = totalRooms - occupiedRooms;
-        
-        // Calculate monthly revenue
-        const monthlyRevenue = properties.reduce((sum, prop) => {
-          if (prop.status === "Aktif") {
-            const occupiedUnits = Math.floor((prop.jumlah_kamar ?? 0) * 0.85);
-            return sum + (occupiedUnits * (prop.harga_per_bulan ?? 0));
-          }
-          return sum;
-        }, 0);
-
-        const newStats: Stats[] = [
-          {
-            title: "Total Properti",
-            value: totalProperties,
-            change: "+2 bulan ini",
-            icon: Building2,
-            color: "bg-blue-500",
-            trend: "up"
-          },
-          {
-            title: "Total Penyewa",
-            value: totalTenants,
-            change: `+${Math.ceil(totalTenants * 0.15)} bulan ini`,
-            icon: Users,
-            color: "bg-green-500",
-            trend: "up"
-          },
-          {
-            title: "Pendapatan Bulan Ini",
-            value: formatRupiah(monthlyRevenue),
-            change: "+15% dari bulan lalu",
-            icon: DollarSign,
-            color: "bg-purple-500",
-            trend: "up"
-          },
-          {
-            title: "Kamar Tersedia",
-            value: availableRooms,
-            change: `dari ${totalRooms} total kamar`,
-            icon: Home,
-            color: "bg-orange-500",
-            trend: "neutral"
-          }
-        ];
-
-        setStats(newStats);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-      } finally {
-        setLoading(false);
+  // Function untuk load data
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load data dari semua sumber - SAMA DENGAN HALAMAN LAIN
+      const properties = await propertyService.getAllProperties();
+      const tenants = await propertyService.getTenantsData();
+      const payments = await propertyService.getPaymentData();
+      const reportSummary = await propertyService.getReportSummary();
+      
+      console.log("Dashboard Data Updated:", { properties, tenants, payments, reportSummary });
+      
+      // Calculate total properties
+      const totalProperties = properties.length;
+      
+      // Calculate total tenants dari data sebenarnya
+      const totalTenants = tenants.length;
+      
+      // Calculate total rooms from all properties
+      const totalRooms = properties.reduce((sum: number, prop: Property) => sum + (prop.jumlah_kamar ?? 0), 0);
+      
+      // Calculate available rooms (total rooms - tenants count)
+      const occupiedRooms = totalTenants;
+      const availableRooms = Math.max(0, totalRooms - occupiedRooms);
+      
+      // Get monthly revenue dari report summary atau hitung dari payments
+      let monthlyRevenue = reportSummary?.total_pendapatan || 0;
+      
+      if (monthlyRevenue === 0 && payments.length > 0) {
+        // Fallback: hitung dari data pembayaran yang status "completed"
+        monthlyRevenue = payments
+          .filter((p: any) => p.status === "completed")
+          .reduce((sum: number, p: any) => sum + (p.jumlah || 0), 0);
       }
-    };
 
+      const newStats: Stats[] = [
+        {
+          title: "Total Properti",
+          value: totalProperties,
+          change: `${totalProperties} properti terdaftar`,
+          icon: Building2,
+          color: "bg-blue-500",
+          trend: "up"
+        },
+        {
+          title: "Total Penyewa",
+          value: totalTenants,
+          change: `${occupiedRooms} dari ${totalRooms} kamar terisi`,
+          icon: Users,
+          color: "bg-green-500",
+          trend: "up"
+        },
+        {
+          title: "Pendapatan Bulan Ini",
+          value: formatRupiah(monthlyRevenue),
+          change: `${totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0}% okupansi`,
+          icon: DollarSign,
+          color: "bg-purple-500",
+          trend: "up"
+        },
+        {
+          title: "Kamar Tersedia",
+          value: availableRooms,
+          change: `dari ${totalRooms} total kamar (${Math.round((occupiedRooms / (totalRooms || 1)) * 100)}% terisi)`,
+          icon: Home,
+          color: "bg-orange-500",
+          trend: "neutral"
+        }
+      ];
+
+      setStats(newStats);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      setStats([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load + Auto-refresh setiap 30 detik
+  useEffect(() => {
+    // Load data langsung saat mount
     loadData();
+    
+    // Set up interval untuk auto-refresh setiap 30 detik
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing dashboard data...");
+      loadData();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval saat component unmount
+    return () => clearInterval(interval);
   }, []);
 
   const quickActions = [
@@ -179,13 +201,30 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Dashboard Manajemen Kos
-          </h1>
-          <p className="text-gray-600">
-            Selamat datang kembali! Berikut ringkasan bisnis kos Anda hari ini.
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Dashboard Manajemen Kos
+            </h1>
+            <p className="text-gray-600">
+              Selamat datang kembali! Berikut ringkasan bisnis kos Anda hari ini.
+            </p>
+            {lastUpdate && (
+              <p className="text-xs text-gray-500 mt-2">
+                Last updated: {lastUpdate.toLocaleTimeString('id-ID')}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
+          >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? 'Updating...' : 'Refresh'}
+          </button>
         </div>
 
         {/* Stats Grid */}

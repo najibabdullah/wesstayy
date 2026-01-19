@@ -45,6 +45,7 @@ export default function PropertyManagement() {
   });
 
   // Get unique property types from data
+  
   const DEFAULT_TYPES = ["Guest House", "Villa", "Hotel", "Apartemen"];
 
   const availableTypes = [

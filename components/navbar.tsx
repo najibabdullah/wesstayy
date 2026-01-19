@@ -52,11 +52,6 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* Main content padding untuk navbar */}
-      <div className="pt-16 lg:pl-64">
-        {/* Content akan masuk di sini */}
-      </div>
     </>
   );
 }

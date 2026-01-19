@@ -333,8 +333,8 @@ export const PropertyModal = ({
             </label>
             <input
               type="text"
-              value={formData.fasilitas?.join(", ") || ""}
-              onChange={(e) => {
+              defaultValue={formData.fasilitas?.join(", ") || ""}
+              onBlur={(e) => {
                 const facilities = e.target.value
                   .split(",")
                   .map((f) => f.trim())
@@ -404,7 +404,7 @@ export const PropertyModal = ({
                   });
                 }}
                 id="image-input"
-                className="hidden"
+                className="hidden" 
                 aria-label="Upload gambar"
               />
               <label htmlFor="image-input" className="cursor-pointer">
