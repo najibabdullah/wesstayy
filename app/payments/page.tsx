@@ -21,7 +21,6 @@ import {
   Plus
 } from "lucide-react";
 
-// ✅ INTERFACE SESUAI LARAVEL API
 interface Pembayaran {
   id: number;
   properti_id: number;
@@ -42,7 +41,6 @@ export default function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   
-  // Form state
   const [formData, setFormData] = useState({
     properti_id: "",
     penyewa_id: "",
@@ -53,7 +51,6 @@ export default function PaymentsPage() {
 
   const API = "http://localhost:8000/api";
 
-  // ✅ FETCH DATA DARI LARAVEL
   const fetchPembayaran = async () => {
     try {
       setLoading(true);
@@ -79,7 +76,6 @@ export default function PaymentsPage() {
     fetchPembayaran();
   }, [selectedTab]);
 
-  // ✅ HITUNG STATISTIK DARI DATA REAL
   const stats = [
     {
       title: "Total Pembayaran Bulan Ini",
@@ -114,7 +110,6 @@ export default function PaymentsPage() {
     { id: "failed", label: "Gagal", count: pembayarans.filter(p => p.status === "failed").length }
   ];
 
-  // ✅ SUBMIT FORM TAMBAH PEMBAYARAN
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -151,11 +146,15 @@ export default function PaymentsPage() {
     }
   };
 
-  // ✅ KONFIRMASI PEMBAYARAN (pending → completed)
+  // 🔥 IMPROVED ERROR HANDLING
   const handleConfirmPayment = async (id: number) => {
     const nomorRef = prompt("Masukkan nomor referensi pembayaran:") || `REF${Date.now()}`;
     
     try {
+      console.log('🔄 Mengirim request konfirmasi pembayaran...');
+      console.log('URL:', `${API}/pembayaran/${id}`);
+      console.log('Data:', { status: "completed", nomor_referensi: nomorRef });
+
       const res = await fetch(`${API}/pembayaran/${id}`, {
         method: "PUT",
         headers: { 
@@ -168,16 +167,39 @@ export default function PaymentsPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Gagal konfirmasi pembayaran");
+      // 🔥 AMBIL RESPONSE BODY DULU SEBELUM CEK STATUS
+      const responseText = await res.text();
+      console.log('📥 Raw Response:', responseText);
 
-      fetchPembayaran();
-      alert(`✅ Pembayaran #${id} berhasil dikonfirmasi!`);
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Response bukan JSON valid:', responseText);
+        throw new Error('Server mengembalikan response yang tidak valid');
+      }
+
+      console.log('📦 Parsed Response:', data);
+
+      if (!res.ok) {
+        // 🔥 TAMPILKAN ERROR DETAIL DARI LARAVEL
+        const errorMessage = data.error || data.message || JSON.stringify(data);
+        console.error('❌ Error dari server:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ Pembayaran berhasil dikonfirmasi');
+      console.log('📊 Transaction created?', data.transaction_created);
+
+      await fetchPembayaran();
+      alert(`✅ Pembayaran #${id} berhasil dikonfirmasi!${data.transaction_created ? '\n💰 Transaksi keuangan telah dicatat' : ''}`);
+
     } catch (err) {
-      alert("❌ " + (err instanceof Error ? err.message : "Gagal konfirmasi"));
+      console.error('❌ Error lengkap:', err);
+      alert("❌ Gagal konfirmasi pembayaran:\n" + (err instanceof Error ? err.message : "Unknown error"));
     }
   };
 
-  // ✅ BATALKAN PEMBAYARAN (pending → failed)
   const handleCancelPayment = async (id: number) => {
     if (!confirm(`Yakin ingin membatalkan pembayaran #${id}?`)) return;
     
@@ -193,16 +215,19 @@ export default function PaymentsPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Gagal batalkan pembayaran");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal batalkan pembayaran");
+      }
 
       fetchPembayaran();
       alert(`✅ Pembayaran #${id} dibatalkan!`);
     } catch (err) {
+      console.error('Error:', err);
       alert("❌ " + (err instanceof Error ? err.message : "Gagal batalkan"));
     }
   };
 
-  // ✅ HAPUS PEMBAYARAN
   const handleDelete = async (id: number) => {
     if (!confirm(`Yakin ingin menghapus pembayaran #${id}?`)) return;
 
@@ -211,11 +236,15 @@ export default function PaymentsPage() {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Gagal menghapus");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal menghapus");
+      }
 
       fetchPembayaran();
       alert("✅ Pembayaran berhasil dihapus!");
     } catch (err) {
+      console.error('Error:', err);
       alert("❌ " + (err instanceof Error ? err.message : "Gagal menghapus"));
     }
   };
