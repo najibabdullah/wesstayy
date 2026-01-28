@@ -13,13 +13,12 @@ import {
   Legend,
 } from "recharts";
 
-// ✅ INTERFACE DISESUAIKAN DENGAN RESPONSE LARAVEL
 interface Transaction {
   id: number;
-  tipe: string; // "pendapatan" atau "pengeluaran"
+  tipe: string;
   jumlah: number;
-  tanggal: string; // Format: "YYYY-MM-DD"
-  keterangan: string; // Di Laravel kamu pakai 'keterangan' bukan 'deskripsi'
+  tanggal: string;
+  keterangan: string;
   pembayaran_id?: number | null;
   created_at: string;
   updated_at: string;
@@ -35,7 +34,7 @@ interface Summary {
   total_pendapatan: number;
   total_pengeluaran: number;
   profit: number;
-  margin: number; // Tambahan dari API kamu
+  margin: number;
 }
 
 export default function ReportsPage() {
@@ -44,24 +43,41 @@ export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useTestData, setUseTestData] = useState(false); // 🔥 TOGGLE TEST DATA
 
   // ✅ GANTI DENGAN URL BACKEND LARAVEL KAMU
   const API = "https://jajal.rplrus.com/api";
 
   useEffect(() => {
     const fetchData = async () => {
+      // 🔥 KALAU TEST MODE, PAKAI DUMMY DATA
+      // if (useTestData) {
+      //   console.log('🧪 USING TEST DATA');
+      //   setSummary(testSummary);
+      //   setChartData(generateCompleteMonthData(testChartData));
+      //   setTransactions(testTransactions);
+      //   setLoading(false);
+      //   return;
+      // }
+
       try {
         setLoading(true);
         setError(null);
 
-        // ✅ FETCH 3 ENDPOINT SEKALIGUS
+        console.log('🔄 Fetching data from API...');
+
         const [summaryRes, chartRes, transactionRes] = await Promise.all([
           fetch(`${API}/laporan/summary`),
           fetch(`${API}/laporan/chart`),
           fetch(`${API}/laporan/transaksi`),
         ]);
 
-        // ✅ CEK APAKAH RESPONSE OK
+        console.log('📡 Response status:', {
+          summary: summaryRes.status,
+          chart: chartRes.status,
+          transaction: transactionRes.status
+        });
+
         if (!summaryRes.ok || !chartRes.ok || !transactionRes.ok) {
           throw new Error("Gagal mengambil data dari server");
         }
@@ -70,10 +86,15 @@ export default function ReportsPage() {
         const rawChartData = await chartRes.json();
         const transactionData = await transactionRes.json();
 
-        // ✅ GENERATE DATA UNTUK SEMUA BULAN (1-12)
-        const completeChartData = generateCompleteMonthData(rawChartData);
+        // 🔥 LOGGING DETAIL
+        console.log('📊 Raw Chart Data dari API:', rawChartData);
+        console.log('📈 Summary Data:', summaryData);
+        console.log('📝 Transaction Data:', transactionData);
 
-        // ✅ SET DATA KE STATE
+        const completeChartData = generateCompleteMonthData(rawChartData);
+        
+        console.log('📊 Complete Chart Data (after generate):', completeChartData);
+
         setSummary(summaryData);
         setChartData(completeChartData);
 
@@ -82,25 +103,22 @@ export default function ReportsPage() {
 
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("❌ Error fetching data:", err);
         setError(err instanceof Error ? err.message : "Terjadi kesalahan");
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [useTestData]); // 🔥 Re-fetch when toggle changes
 
-  // ✅ FUNCTION BUAT GENERATE DATA SEMUA BULAN
   const generateCompleteMonthData = (apiData: ChartDataPoint[]) => {
-    // Bikin array 12 bulan dengan nilai 0
     const allMonths: ChartDataPoint[] = Array.from({ length: 12 }, (_, i) => ({
       bulan: i + 1,
       pendapatan: 0,
       pengeluaran: 0,
     }));
 
-    // Merge dengan data dari API
     apiData.forEach((data) => {
       const monthIndex = data.bulan - 1;
       if (monthIndex >= 0 && monthIndex < 12) {
@@ -115,7 +133,6 @@ export default function ReportsPage() {
     return allMonths;
   };
 
-  // ✅ HELPER FUNCTION FORMAT RUPIAH
   const rupiah = (n: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -123,23 +140,11 @@ export default function ReportsPage() {
       minimumFractionDigits: 0,
     }).format(n);
 
-  // ✅ NAMA BULAN INDONESIA
   const bulan = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mei",
-    "Jun",
-    "Jul",
-    "Agu",
-    "Sep",
-    "Okt",
-    "Nov",
-    "Des",
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
   ];
 
-  // ✅ LOADING STATE
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -151,7 +156,6 @@ export default function ReportsPage() {
     );
   }
 
-  // ✅ ERROR STATE
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -186,11 +190,27 @@ export default function ReportsPage() {
                 Ringkasan performa keuangan bisnis Anda
               </p>
             </div>
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-slate-700">
-                Data Terkini
-              </span>
+            
+            {/* 🔥 TOGGLE TEST DATA */}
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useTestData}
+                  onChange={(e) => setUseTestData(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Use Test Data
+                </span>
+              </label>
+              
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${useTestData ? 'bg-orange-500' : 'bg-green-500'}`}></div>
+                <span className="text-sm font-medium text-slate-700">
+                  {useTestData ? 'Test Mode' : 'Live Data'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -392,8 +412,6 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-/* ================= COMPONENT ================= */
 
 function SummaryCard({
   title,
