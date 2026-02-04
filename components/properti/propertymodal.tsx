@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, Loader, TicketPercent } from "lucide-react";
-import { Property } from "@/lib/types/property";
+import { Property, PropertyImage } from "@/lib/types/property";
 import MapSelector from "../properti/mapselector";
 import { FormData } from "@/lib/types/property";
 
@@ -54,6 +54,7 @@ export const PropertyModal = ({
         jumlah_kamar_mandi: property.jumlah_kamar_mandi?.toString() || "",
         fasilitas: property.fasilitas || [],
         deskripsi: property.deskripsi || "",
+        images: property.images || [], // ← TAMBAH: Load existing images
       });
       setValidationErrors([]);
     } else if (isOpen) {
@@ -419,27 +420,35 @@ export const PropertyModal = ({
 
             {formData.images && formData.images.length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {formData.images.map((image, idx) => (
-                  <div key={idx} className="relative">
-                    <img
-                      src={URL.createObjectURL(image)}
-                      alt={`Preview ${idx}`}
-                      className="w-full h-20 object-cover rounded border border-gray-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          images: formData.images?.filter((_, i) => i !== idx),
-                        });
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {formData.images.map((image, idx) => {
+                  const isFile = image instanceof File;
+                  const imageUrl = isFile
+                    ? URL.createObjectURL(image)
+                    : (image as PropertyImage).image_url;
+
+                  return (
+                    <div key={idx} className="relative">
+                      <img
+                        src={imageUrl}
+                        alt={`Preview ${idx}`}
+                        className="w-full h-20 object-cover rounded border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            images: formData.images?.filter((_, i) => i !== idx),
+                          });
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors shadow-sm"
+                        aria-label="Hapus gambar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

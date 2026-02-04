@@ -1,5 +1,6 @@
 "use client";
 
+import api from "@/lib/services/api";
 import { useEffect, useState } from "react";
 import {
   LineChart,
@@ -44,54 +45,20 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [useTestData, setUseTestData] = useState(false); // 🔥 TOGGLE TEST DATA
 
-  const API = "http://localhost:8000/api";
-
-  // 🔥 DUMMY DATA UNTUK TEST
-  const testSummary: Summary = {
-    total_pendapatan: 5000000,
-    total_pengeluaran: 2000000,
-    profit: 3000000,
-    margin: 60
-  };
-
-  const testChartData: ChartDataPoint[] = [
-    { bulan: 1, pendapatan: 5000000, pengeluaran: 2000000 },
-    { bulan: 2, pendapatan: 0, pengeluaran: 0 },
-    { bulan: 3, pendapatan: 0, pengeluaran: 0 },
-  ];
-
-  const testTransactions: Transaction[] = [
-    {
-      id: 1,
-      tipe: "pendapatan",
-      jumlah: 5000000,
-      tanggal: "2026-01-15",
-      keterangan: "Test Pendapatan",
-      created_at: "2026-01-15",
-      updated_at: "2026-01-15"
-    },
-    {
-      id: 2,
-      tipe: "pengeluaran",
-      jumlah: 2000000,
-      tanggal: "2026-01-16",
-      keterangan: "Test Pengeluaran",
-      created_at: "2026-01-16",
-      updated_at: "2026-01-16"
-    }
-  ];
+  // ✅ GANTI DENGAN URL BACKEND LARAVEL KAMU
+  const API = "https://jajal.rplrus.com/api";
 
   useEffect(() => {
     const fetchData = async () => {
       // 🔥 KALAU TEST MODE, PAKAI DUMMY DATA
-      if (useTestData) {
-        console.log('🧪 USING TEST DATA');
-        setSummary(testSummary);
-        setChartData(generateCompleteMonthData(testChartData));
-        setTransactions(testTransactions);
-        setLoading(false);
-        return;
-      }
+      // if (useTestData) {
+      //   console.log('🧪 USING TEST DATA');
+      //   setSummary(testSummary);
+      //   setChartData(generateCompleteMonthData(testChartData));
+      //   setTransactions(testTransactions);
+      //   setLoading(false);
+      //   return;
+      // }
 
       try {
         setLoading(true);
@@ -130,6 +97,8 @@ export default function ReportsPage() {
 
         setSummary(summaryData);
         setChartData(completeChartData);
+
+        // Laravel paginate response ada di property 'data'
         setTransactions(transactionData.data || transactionData);
 
         setLoading(false);
@@ -355,9 +324,7 @@ export default function ReportsPage() {
             <h2 className="text-2xl font-bold text-slate-900 mb-1">
               Riwayat Transaksi
             </h2>
-            <p className="text-slate-600">
-              Daftar semua transaksi keuangan
-            </p>
+            <p className="text-slate-600">Daftar semua transaksi keuangan</p>
           </div>
 
           <div className="overflow-x-auto">
@@ -400,7 +367,9 @@ export default function ReportsPage() {
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {t.tipe === "pendapatan" ? "💰 Pendapatan" : "💸 Pengeluaran"}
+                          {t.tipe === "pendapatan"
+                            ? "💰 Pendapatan"
+                            : "💸 Pengeluaran"}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-slate-600">
@@ -491,9 +460,7 @@ function SummaryCard({
       className={`bg-gradient-to-br ${config.bg} rounded-2xl p-6 shadow-sm border ${config.border} hover:shadow-md transition-all duration-300`}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`${config.iconBg} rounded-xl p-3 text-2xl`}>
-          {icon}
-        </div>
+        <div className={`${config.iconBg} rounded-xl p-3 text-2xl`}>{icon}</div>
       </div>
       <p className="text-sm font-medium text-slate-600 mb-1">{title}</p>
       <p className={`text-3xl font-bold ${config.text}`}>
