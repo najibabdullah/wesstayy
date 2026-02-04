@@ -21,6 +21,7 @@ import { PropertyCard } from "@/components/properti/propertycard";
 import { PropertyModal } from "@/components/properti/propertymodal";
 import { normalizeProperty } from "@/lib/utils/propertyNormalizer";
 import { formatRupiah } from "@/lib/utils/formatters";
+import { PropertyDetailModal } from "@/components/properti/propertydetailmodal";
 
 // Main App Component
 export default function PropertyManagement() {
@@ -30,6 +31,10 @@ export default function PropertyManagement() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(
     null
   );
+  const [detailedProperty, setDetailedProperty] = useState<Property | null>(
+    null
+  );
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingState, setLoadingState] = useState<
     "idle" | "loading" | "error"
@@ -125,6 +130,11 @@ export default function PropertyManagement() {
       // ========================================
       const formData = new FormData();
 
+      // 0. METHOD SPOOFING (Laravel requirement for PUT with files)
+      if (selectedProperty?.id) {
+        formData.append("_method", "PUT");
+      }
+
       // 1. TEXT FIELDS (DASAR)
       formData.append("nama", payload.nama);
       formData.append("lokasi", payload.lokasi);
@@ -155,15 +165,22 @@ export default function PropertyManagement() {
 
       // 4. IMAGES ARRAY ✅ (append dengan suffix [])
       if (payload.images && Array.isArray(payload.images)) {
-        let imageCount = 0;
+        let newImageCount = 0;
+        let existingImageCount = 0;
         for (const image of payload.images) {
           if (image instanceof File) {
             // ✅ Gunakan suffix [] untuk array
             formData.append("images[]", image);
-            imageCount++;
+            newImageCount++;
+          } else {
+            // ✅ KIRIM ID GAMBAR LAMA YANG INGIN DIPERTAHANKAN
+            if ((image as PropertyImage).id) {
+              formData.append("existing_images[]", String((image as PropertyImage).id));
+              existingImageCount++;
+            }
           }
         }
-        console.log(`✅ Added ${imageCount} image(s)`);
+        console.log(`✅ Added ${newImageCount} new image(s), keeping ${existingImageCount} existing`);
       } else {
         console.log("⚠️ No images uploaded");
       }
@@ -188,15 +205,19 @@ export default function PropertyManagement() {
 
       if (selectedProperty?.id) {
         // ========== UPDATE ==========
-        console.log(`🔄 Updating property ID: ${selectedProperty.id}`);
-        const res = await api.put(
+        console.log(`🔄 Updating property ID: ${selectedProperty.id} (Using POST + _method=PUT)`);
+
+        // Laravel doesn't support Multipart/Form-Data with PUT directly.
+        // We use POST and spoof the method with _method=PUT.
+        const res = await api.post(
           `/properti/${selectedProperty.id}`,
           formData,
           requestConfig
         );
 
+        const normalized = normalizeProperty(res.data);
         setProperties(
-          properties.map((p) => (p.id === selectedProperty.id ? res.data : p))
+          properties.map((p) => (p.id === selectedProperty.id ? normalized : p))
         );
         toast.success("✅ Properti berhasil diperbarui");
         closeModal();
@@ -206,7 +227,8 @@ export default function PropertyManagement() {
         const res = await api.post("/properti", formData, requestConfig);
 
         toast.success("✅ Properti berhasil disimpan");
-        setProperties([...properties, res.data]);
+        const normalized = normalizeProperty(res.data);
+        setProperties([...properties, normalized]);
         closeModal();
       }
     } catch (error: any) {
@@ -258,13 +280,18 @@ export default function PropertyManagement() {
     setIsModalOpen(true);
   };
 
+  const handleViewDetail = (property: Property) => {
+    setDetailedProperty(property);
+    setIsDetailModalOpen(true);
+  };
+
   const stats = {
     total: properties.length,
     totalRooms: properties.reduce((sum, p) => sum + (p.jumlah_kamar || 0), 0),
     avgPrice:
       properties.length > 0
         ? properties.reduce((sum, p) => sum + p.harga_per_bulan, 0) /
-          properties.length
+        properties.length
         : 0,
   };
 
@@ -371,11 +398,10 @@ export default function PropertyManagement() {
               <button
                 onClick={() => setViewMode("grid")}
                 aria-label="Grid view"
-                className={`px-3 py-1 rounded transition-colors font-medium text-sm ${
-                  viewMode === "grid"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 rounded transition-colors font-medium text-sm ${viewMode === "grid"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+                  }`}
               >
                 <Grid3x3 className="w-4 h-4 inline mr-1" />
                 Grid
@@ -383,11 +409,10 @@ export default function PropertyManagement() {
               <button
                 onClick={() => setViewMode("list")}
                 aria-label="List view"
-                className={`px-3 py-1 rounded transition-colors font-medium text-sm ${
-                  viewMode === "list"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 rounded transition-colors font-medium text-sm ${viewMode === "list"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+                  }`}
               >
                 <List className="w-4 h-4 inline mr-1" />
                 List
@@ -480,12 +505,13 @@ export default function PropertyManagement() {
                 : "space-y-4"
             }
           >
-            {filteredProperties.map((property) => (
+            {filteredProperties.map((property, index) => (
               <PropertyCard
-                key={property.id}
+                key={property.id || `prop-${index}`}
                 property={property}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClick={handleViewDetail}
               />
             ))}
           </div>
@@ -505,6 +531,15 @@ export default function PropertyManagement() {
               ? availableTypes
               : ["Guest House", "Villa", "Hotel", "Apartemen"]
           }
+        />
+
+        <PropertyDetailModal
+          isOpen={isDetailModalOpen}
+          property={detailedProperty}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setDetailedProperty(null);
+          }}
         />
       </div>
     </div>

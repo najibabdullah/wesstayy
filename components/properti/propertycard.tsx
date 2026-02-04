@@ -7,6 +7,7 @@ export interface PropertyCardProps {
   property: Property;
   onEdit: (property: Property) => void;
   onDelete: (id: number) => void;
+  onClick: (property: Property) => void;
 }
 /**
  * PropertyCard Component
@@ -45,6 +46,7 @@ export const PropertyCard = ({
   property,
   onEdit,
   onDelete,
+  onClick,
 }: PropertyCardProps) => {
   const getTipeBadgeColor = (tipe?: string) => {
     const colorMap: Record<string, string> = {
@@ -57,7 +59,10 @@ export const PropertyCard = ({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+    <div
+      onClick={() => onClick(property)}
+      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all cursor-pointer group"
+    >
       <div className="relative h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center overflow-hidden">
         {property.cover_image?.image_url ? (
           <img
@@ -125,7 +130,8 @@ export const PropertyCard = ({
 
         <div className="flex gap-2">
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (property.latitude && property.longitude) {
                 window.open(
                   `https://www.google.com/maps/?q=${property.latitude},${property.longitude}`,
@@ -140,13 +146,17 @@ export const PropertyCard = ({
             Lokasi
           </button>
           <button
-            onClick={() => onEdit(property)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(property);
+            }}
             className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
           >
             Edit
           </button>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (property.id && confirm("Yakin hapus properti ini?")) {
                 onDelete(property.id);
               }

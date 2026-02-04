@@ -17,7 +17,8 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  Download
+  Download,
+  Building2
 } from "lucide-react";
 
 export default function TenantsPage() {
@@ -25,7 +26,7 @@ export default function TenantsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [selectedTenant, setSelectedTenant] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const [tenants, setTenants] = useState([
@@ -112,6 +113,34 @@ export default function TenantsPage() {
       status: "active",
       paymentStatus: "paid",
       lastPayment: "2024-12-15"
+    },
+    {
+      id: 7,
+      name: "Rina Wijaya",
+      email: "rina.w@email.com",
+      phone: "087890123456",
+      property: "Kos Mawar Indah",
+      room: "B-201",
+      rentAmount: 1800000,
+      startDate: "2024-05-20",
+      endDate: "2025-05-20",
+      status: "active",
+      paymentStatus: "paid",
+      lastPayment: "2024-12-20"
+    },
+    {
+      id: 8,
+      name: "Fajri Ramadhan",
+      email: "fajri.r@email.com",
+      phone: "088901234567",
+      property: "Kos Melati",
+      room: "A-105",
+      rentAmount: 1200000,
+      startDate: "2024-11-01",
+      endDate: "2025-02-01",
+      status: "active",
+      paymentStatus: "pending",
+      lastPayment: "2024-11-01"
     }
   ]);
 
@@ -155,7 +184,7 @@ export default function TenantsPage() {
     overduePayments: tenants.filter((t) => t.paymentStatus === "overdue").length
   };
 
-  const handleAddTenant = (e) => {
+  const handleAddTenant = (e: React.FormEvent) => {
     e.preventDefault();
     const newTenant = {
       id: tenants.length + 1,
@@ -179,24 +208,26 @@ export default function TenantsPage() {
     });
   };
 
-  const handleEditTenant = (e) => {
+  const handleEditTenant = (e: React.FormEvent) => {
     e.preventDefault();
     setTenants(
       tenants.map((t) =>
-        t.id === selectedTenant.id ? { ...t, ...formData } : t
+        t.id === selectedTenant.id
+          ? { ...t, ...formData, rentAmount: parseFloat(formData.rentAmount) }
+          : t
       )
     );
     setShowEditModal(false);
     setSelectedTenant(null);
   };
 
-  const handleDeleteTenant = (id) => {
+  const handleDeleteTenant = (id: number) => {
     if (confirm("Apakah Anda yakin ingin menghapus penyewa ini?")) {
       setTenants(tenants.filter((t) => t.id !== id));
     }
   };
 
-  const openEditModal = (tenant) => {
+  const openEditModal = (tenant: any) => {
     setSelectedTenant(tenant);
     setFormData({
       name: tenant.name,
@@ -212,7 +243,7 @@ export default function TenantsPage() {
     setShowEditModal(true);
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
@@ -220,7 +251,7 @@ export default function TenantsPage() {
     }).format(amount);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       year: "numeric",
       month: "long",
@@ -451,11 +482,10 @@ export default function TenantsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          tenant.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tenant.status === "active"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                          }`}
                       >
                         {tenant.status === "active" ? "Aktif" : "Kadaluarsa"}
                       </span>
@@ -463,19 +493,18 @@ export default function TenantsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full mb-1 ${
-                            tenant.paymentStatus === "paid"
-                              ? "bg-green-100 text-green-800"
-                              : tenant.paymentStatus === "pending"
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full mb-1 ${tenant.paymentStatus === "paid"
+                            ? "bg-green-100 text-green-800"
+                            : tenant.paymentStatus === "pending"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {tenant.paymentStatus === "paid"
                             ? "Lunas"
                             : tenant.paymentStatus === "pending"
-                            ? "Pending"
-                            : "Terlambat"}
+                              ? "Pending"
+                              : "Terlambat"}
                         </span>
                         <div className="text-xs text-gray-500">
                           {formatDate(tenant.lastPayment)}
@@ -523,8 +552,18 @@ export default function TenantsPage() {
 
         {/* Add/Edit Modal */}
         {(showAddModal || showEditModal) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => {
+              setShowAddModal(false);
+              setShowEditModal(false);
+              setSelectedTenant(null);
+            }}
+          >
+            <div
+              className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {showAddModal ? "Tambah Penyewa Baru" : "Edit Data Penyewa"}
@@ -712,8 +751,14 @@ export default function TenantsPage() {
 
         {/* Detail Modal */}
         {showDetailModal && selectedTenant && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setShowDetailModal(false)}
+          >
+            <div
+              className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">
                   Detail Penyewa
@@ -737,11 +782,10 @@ export default function TenantsPage() {
                       {selectedTenant.name}
                     </h3>
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        selectedTenant.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedTenant.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                        }`}
                     >
                       {selectedTenant.status === "active" ? "Aktif" : "Kadaluarsa"}
                     </span>
@@ -820,19 +864,18 @@ export default function TenantsPage() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Status Pembayaran</p>
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            selectedTenant.paymentStatus === "paid"
-                              ? "bg-green-100 text-green-800"
-                              : selectedTenant.paymentStatus === "pending"
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedTenant.paymentStatus === "paid"
+                            ? "bg-green-100 text-green-800"
+                            : selectedTenant.paymentStatus === "pending"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {selectedTenant.paymentStatus === "paid"
                             ? "Lunas"
                             : selectedTenant.paymentStatus === "pending"
-                            ? "Pending"
-                            : "Terlambat"}
+                              ? "Pending"
+                              : "Terlambat"}
                         </span>
                       </div>
                     </div>

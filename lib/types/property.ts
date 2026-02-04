@@ -33,7 +33,7 @@ export interface Property {
   longitude?: number;
   status?: string;
   // Images
-  images?: PropertyImage[] | File[]; // ← UBAH JADI INI
+  images?: (File | PropertyImage)[];
   cover_image?: PropertyImage;
   prices?: Price[];
   created_at?: string;
@@ -51,7 +51,7 @@ export interface FormData {
   jumlah_kamar_mandi: string;
   fasilitas: string[];
   deskripsi: string;
-  images?: File[]; // ← TAMBAH INI
+  images?: (File | PropertyImage)[]; // ← UBAH: Support existing images
 }
 
 export interface PropertyStats {
