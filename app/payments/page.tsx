@@ -18,7 +18,8 @@ import {
   Eye,
   Check,
   X,
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react";
 
 interface Pembayaran {
@@ -40,6 +41,8 @@ export default function PaymentsPage() {
   const [selectedTab, setSelectedTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Pembayaran | null>(null);
   
   const [formData, setFormData] = useState({
     properti_id: "",
@@ -146,7 +149,6 @@ export default function PaymentsPage() {
     }
   };
 
-  // 🔥 IMPROVED ERROR HANDLING
   const handleConfirmPayment = async (id: number) => {
     const nomorRef = prompt("Masukkan nomor referensi pembayaran:") || `REF${Date.now()}`;
     
@@ -167,7 +169,6 @@ export default function PaymentsPage() {
         }),
       });
 
-      // 🔥 AMBIL RESPONSE BODY DULU SEBELUM CEK STATUS
       const responseText = await res.text();
       console.log('📥 Raw Response:', responseText);
 
@@ -182,7 +183,6 @@ export default function PaymentsPage() {
       console.log('📦 Parsed Response:', data);
 
       if (!res.ok) {
-        // 🔥 TAMPILKAN ERROR DETAIL DARI LARAVEL
         const errorMessage = data.error || data.message || JSON.stringify(data);
         console.error('❌ Error dari server:', errorMessage);
         throw new Error(errorMessage);
@@ -229,7 +229,7 @@ export default function PaymentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(`Yakin ingin menghapus pembayaran #${id}?`)) return;
+    if (!confirm(`Yakin ingin menghapus pembayaran #${id}? Data yang dihapus tidak dapat dikembalikan.`)) return;
 
     try {
       const res = await fetch(`${API}/pembayaran/${id}`, {
@@ -247,6 +247,11 @@ export default function PaymentsPage() {
       console.error('Error:', err);
       alert("❌ " + (err instanceof Error ? err.message : "Gagal menghapus"));
     }
+  };
+
+  const handleShowDetail = (payment: Pembayaran) => {
+    setSelectedPayment(payment);
+    setShowDetailModal(true);
   };
 
   const getStatusBadge = (status: "completed" | "pending" | "failed") => {
@@ -489,6 +494,16 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
+                        {/* Tombol Detail */}
+                        <button 
+                          onClick={() => handleShowDetail(payment)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Lihat Detail"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        {/* Tombol Konfirmasi & Batalkan (hanya untuk pending) */}
                         {payment.status === "pending" && (
                           <>
                             <button 
@@ -500,19 +515,21 @@ export default function PaymentsPage() {
                             </button>
                             <button 
                               onClick={() => handleCancelPayment(payment.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                               title="Batalkan"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </>
                         )}
+
+                        {/* Tombol Hapus */}
                         <button 
                           onClick={() => handleDelete(payment.id)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Hapus"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Hapus Pembayaran"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -673,6 +690,112 @@ export default function PaymentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETAIL PEMBAYARAN */}
+      {showDetailModal && selectedPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Detail Pembayaran</h2>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">ID Pembayaran</span>
+                <span className="text-sm font-bold text-gray-900">#{selectedPayment.id}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Properti</span>
+                <span className="text-sm font-semibold text-gray-900">Properti #{selectedPayment.properti_id}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Penyewa</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {selectedPayment.penyewa_id ? `Penyewa #${selectedPayment.penyewa_id}` : 'Tidak ada'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Jumlah</span>
+                <span className="text-sm font-bold text-blue-600">{formatCurrency(selectedPayment.jumlah)}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Jatuh Tempo</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {new Date(selectedPayment.tanggal_jatuh_tempo).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric"
+                  })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Metode Pembayaran</span>
+                <span className="text-sm font-semibold text-gray-900 capitalize">
+                  {selectedPayment.metode_pembayaran.replace('_', ' ')}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Status</span>
+                <div>{getStatusBadge(selectedPayment.status)}</div>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Nomor Referensi</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {selectedPayment.nomor_referensi || '-'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-600">Dibuat Pada</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {new Date(selectedPayment.created_at).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-3">
+                <span className="text-sm font-medium text-gray-600">Terakhir Diupdate</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {new Date(selectedPayment.updated_at).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
